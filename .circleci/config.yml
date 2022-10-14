@@ -1,8 +1,10 @@
 version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.4.0
 jobs:
   build:
     docker:
-      - image: cimg/node:14.10.1 # the primary container, where your job's commands are run
+      - image: cimg/node:16.10 # the primary container, where your job's commands are run
         auth:
           username: mydockerhub-user
           password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
@@ -11,16 +13,31 @@ jobs:
       - run:
           name: Build Dependencies and Application
           command: |-
-            pwd
-            ls
             cd angular-app
 
             npm install
             npm run build
-
+  test:
+    docker:
+      - image: cimg/node:16.10-browsers # the primary container, where your job's commands are run
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+    steps:
+      - browser-tools/install-chrome
+      - browser-tools/install-chromedriver
+      - checkout # check out the code in the project directory
+      - run:
+          name: Build Dependencies and Application
+          command: |-
+            cd angular-app
+            export CI=true
+            npm install --also=dev
+            npm test
 
 workflows:
   version: 2
   builds:
     jobs:
       - build
+      - test
