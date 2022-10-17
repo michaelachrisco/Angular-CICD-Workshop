@@ -3,19 +3,30 @@ orbs:
   browser-tools: circleci/browser-tools@1.4.0
 jobs:
   build:
+    working_directory: ~/repo/angular-app
     docker:
       - image: cimg/node:16.10 # the primary container, where your job's commands are run
         auth:
           username: mydockerhub-user
           password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
     steps:
-      - checkout # check out the code in the project directory
+      - checkout: # check out the code in the project directory
+          path: ~/repo/
+      # look for existing cache and restore if found
+      - restore_cache:
+          key: v1-deps-{{ checksum "package-lock.json" }}
+      # install dependencies    
       - run:
-          name: Build Dependencies and Application
+          name: install dependencies
+          command: npm install
+      # save any changes to the cache
+      - save_cache:
+          key: v1-deps-{{ checksum "package-lock.json" }}
+          paths: 
+            - node_modules
+      - run:
+          name: Build Application
           command: |-
-            cd angular-app
-
-            npm install
             npm run build
   test:
     docker:
@@ -28,7 +39,7 @@ jobs:
       - browser-tools/install-chromedriver
       - checkout # check out the code in the project directory
       - run:
-          name: Build Dependencies and Application
+          name: Build Dependencies and Test
           command: |-
             cd angular-app
             export CI=true
